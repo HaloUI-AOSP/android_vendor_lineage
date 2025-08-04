@@ -138,9 +138,13 @@ endif
 # Bootanimation
 TARGET_SCREEN_WIDTH ?= 1080
 TARGET_SCREEN_HEIGHT ?= 1920
+
+INCLUDE_LINEAGE_BOOTANIMATION := false
+ifneq ($(INCLUDE_LINEAGE_BOOTANIMATION),false)
 PRODUCT_PACKAGES += \
     bootanimation.zip \
     bootanimation-dark.zip
+endif
 
 # Lineage interfaces
 PRODUCT_PACKAGES += \

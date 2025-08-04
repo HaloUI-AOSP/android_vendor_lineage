@@ -28,8 +28,10 @@ $(call soong_config_set,lineage_bootanimation,height,$(TARGET_SCREEN_HEIGHT))
 $(call soong_config_set,lineage_bootanimation,width,$(TARGET_SCREEN_WIDTH))
 $(call soong_config_set,lineage_bootanimation,half_res,$(TARGET_BOOTANIMATION_HALF_RES))
 
+ifneq ($(INCLUDE_LINEAGE_BOOTANIMATION),false)
 ifneq ($(TARGET_BOOTANIMATION),)
 $(call soong_config_set,lineage_bootanimation,prebuilt_file,$(TARGET_BOOTANIMATION))
+endif
 endif
 
 # Charger
