@@ -54,5 +54,9 @@ PRODUCT_DEXPREOPT_SPEED_APPS += \
     SystemUI \
     GameSpace
 
+# Use a generic profile based boot image by default
+PRODUCT_USE_PROFILE_FOR_BOOT_IMAGE := true
+PRODUCT_DEX_PREOPT_BOOT_IMAGE_PROFILE_LOCATION := frameworks/base/boot/boot-image-profile.txt
+
 # Inherit haloUI extras
 include vendor/haloui/config.mk
