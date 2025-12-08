@@ -20,6 +20,13 @@ PRODUCT_SYSTEM_PROPERTIES += \
     debug.renderengine.blur_algorithm=kawase2
 endif
 
+# Blur
+TARGET_ENABLE_BLUR ?= true
+ifeq ($(TARGET_ENABLE_BLUR), true)
+PRODUCT_PRODUCT_PROPERTIES += \
+    ro.surface_flinger.supports_background_blur=1
+endif
+
 # Packages
 PRODUCT_PACKAGES += \
    GameSpace
