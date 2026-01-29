@@ -28,3 +28,6 @@ PRODUCT_PACKAGES += \
 PRODUCT_COPY_FILES += \
     vendor/lineage/prebuilt/common/etc/init/init.lineage-updater.rc:$(TARGET_COPY_OUT_SYSTEM_EXT)/etc/init/init.lineage-updater.rc
 endif
+
+# Enable Material Design 3 Expressive
+PRODUCT_PRODUCT_PROPERTIES += is_expressive_design_enabled=true
