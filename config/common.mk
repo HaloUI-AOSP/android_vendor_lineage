@@ -306,6 +306,11 @@ else
     $(call inherit-product, vendor/microg/microg.mk)
 endif
 
+# perf anim override
+PERF_ANIM_OVERRIDE ?= false
+PRODUCT_PRODUCT_PROPERTIES += \
+  persist.sys.activity_anim_perf_override=$(PERF_ANIM_OVERRIDE)
+
 include vendor/lineage/config/version.mk
 
 -include vendor/lineage-priv/keys/keys.mk
