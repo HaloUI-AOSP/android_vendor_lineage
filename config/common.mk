@@ -299,6 +299,13 @@ PRODUCT_PACKAGE_OVERLAYS += vendor/crowdin/overlay
 PRODUCT_EXTRA_RECOVERY_KEYS += \
     vendor/lineage/build/target/product/security/lineage
 
+# Gapps and Microg
+ifeq ($(TARGET_BUILD_GAPPS),true)
+    $(call inherit-product-if-exists, vendor/gapps/arm64/arm64-vendor.mk)
+else
+    $(call inherit-product, vendor/microg/microg.mk)
+endif
+
 include vendor/lineage/config/version.mk
 
 -include vendor/lineage-priv/keys/keys.mk
