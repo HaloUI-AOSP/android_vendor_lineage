@@ -56,7 +56,7 @@ function breakfast()
         else
             # This is probably just the Lineage model name
             if [ -z "$variant" ]; then
-                variant="userdebug"
+                variant="user"
             fi
 
             lunch lineage_$target-$aosp_target_release-$variant
