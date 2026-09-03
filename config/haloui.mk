@@ -14,6 +14,10 @@ PRODUCT_COPY_FILES += \
     frameworks/native/data/etc/android.hardware.biometrics.face.xml:$(TARGET_COPY_OUT_SYSTEM)/etc/permissions/android.hardware.biometrics.face.xml
 endif
 
+# Packages
+PRODUCT_PACKAGES += \
+   GameSpace
+
 # Updater
 ifeq ($(BUILD_TYPE_OFFICIAL),true)
 PRODUCT_PACKAGES += \
