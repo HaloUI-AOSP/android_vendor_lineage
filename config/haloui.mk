@@ -19,3 +19,12 @@ ifneq ($(TARGET_SUPPORTS_QUICK_TAP),false)
 PRODUCT_PACKAGES += \
     ColumbusService
 endif
+
+# Updater
+ifeq ($(BUILD_TYPE_OFFICIAL),true)
+PRODUCT_PACKAGES += \
+    Updater
+
+PRODUCT_COPY_FILES += \
+    vendor/lineage/prebuilt/common/etc/init/init.lineage-updater.rc:$(TARGET_COPY_OUT_SYSTEM_EXT)/etc/init/init.lineage-updater.rc
+endif
