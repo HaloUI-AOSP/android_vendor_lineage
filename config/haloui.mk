@@ -20,6 +20,10 @@ PRODUCT_PACKAGES += \
     ColumbusService
 endif
 
+# Packages
+PRODUCT_PACKAGES += \
+   GameSpace
+
 # Updater
 ifeq ($(BUILD_TYPE_OFFICIAL),true)
 PRODUCT_PACKAGES += \
