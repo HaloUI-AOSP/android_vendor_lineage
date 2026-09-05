@@ -20,6 +20,12 @@ PRODUCT_PACKAGES += \
     ColumbusService
 endif
 
+# Kawase Blur
+ifeq ($(TARGET_USES_KAWASE2_BLUR),true)
+PRODUCT_SYSTEM_PROPERTIES += \
+    debug.renderengine.blur_algorithm=kawase2
+endif
+
 # Packages
 PRODUCT_PACKAGES += \
    GameSpace
