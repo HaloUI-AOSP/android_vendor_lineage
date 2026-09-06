@@ -47,5 +47,12 @@ PRODUCT_PRODUCT_PROPERTIES += is_expressive_design_enabled=true
 PRODUCT_PRODUCT_PROPERTIES += \
     persist.sys.disable_rescue=true
 
+# SystemUI
+PRODUCT_DEXPREOPT_SPEED_APPS += \
+    Launcher3QuickStep \
+    Settings \
+    SystemUI \
+    GameSpace
+
 # Inherit haloUI extras
 include vendor/haloui/config.mk
