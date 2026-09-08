@@ -65,5 +65,12 @@ PRODUCT_DEX_PREOPT_BOOT_IMAGE_PROFILE_LOCATION := \
 PRODUCT_ARTIFACT_PATH_REQUIREMENT_ALLOWED_LIST += \
     system/etc/preloaded-classes
 
+# Allow disabling PIHooks
+ifeq ($(TARGET_DISABLE_PIHOOKS),true)
+PRODUCT_PRODUCT_PROPERTIES += \
+    persist.sys.pihooks.disable.gms_props=true \
+    persist.sys.pihooks.disable.gms_key_attestation_block=true
+endif
+
 # Inherit haloUI extras
 include vendor/haloui/config.mk
