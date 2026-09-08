@@ -44,7 +44,7 @@ else:
 
 try:
     device = product[product.index('_') + 1:]
-except IndexError:
+except ValueError:
     device = product
 
 if not depsonly:
@@ -68,16 +68,22 @@ def add_auth(req):
 
 def fetch_repos():
     device_q = urllib.parse.quote(device)
-    gh_url = 'https://api.github.com/search/repositories?q=%s+user:HaloUI-Devices+in:name+fork:true' % device_q
-    gh_req = urllib.request.Request(gh_url)
-    add_auth(gh_req)
-    try:
-        gh_res = json.loads(urllib.request.urlopen(gh_req, timeout=10).read().decode())
-        for item in gh_res.get('items', []):
-            item['found_on'] = 'haloui-devices'
-            repositories.append(item)
-    except Exception:
-        print('GitHub search failed')
+
+    def search_github_org(org, remote_name):
+        gh_url = ('https://api.github.com/search/repositories?q=%s+user:%s+in:name+fork:true'
+                  % (device_q, urllib.parse.quote(org)))
+        gh_req = urllib.request.Request(gh_url)
+        add_auth(gh_req)
+        try:
+            gh_res = json.loads(urllib.request.urlopen(gh_req, timeout=10).read().decode())
+            for item in gh_res.get('items', []):
+                item['found_on'] = remote_name
+                repositories.append(item)
+        except Exception:
+            print(f'GitHub search failed for org {org}')
+
+    search_github_org('HaloUI-Devices', 'haloui-devices')
+    search_github_org('HaloUI-AOSP', 'haloui')
 
     cb_url = 'https://codeberg.org/api/v1/repos/search?q=%s&owner=zenin1504' % device_q
     cb_req = urllib.request.Request(cb_url)
@@ -104,8 +110,8 @@ def indent(elem, level=0):
             elem.text = i + '  '
         if not elem.tail or not elem.tail.strip():
             elem.tail = i
-        for elem in elem:
-            indent(elem, level + 1)
+        for child in elem:
+            indent(child, level + 1)
         if not elem.tail or not elem.tail.strip():
             elem.tail = i
     else:
@@ -134,23 +140,23 @@ def get_from_manifest(devicename):
             print(f'Warning: could not parse {path}: {e}')
     return None
 
-def is_in_manifest(tag, attr, attr_value):
-    search_paths = glob.glob('.repo/local_manifests/*.xml')
-    search_paths.append(get_manifest_path())
-    for s in ['lineage.xml', 'haloui.xml']:
-        search_paths.append(f'.repo/manifests/snippets/{s}')
+def get_roomservice_paths():
+    paths = set()
+    rs = '.repo/local_manifests/roomservice.xml'
+    if not os.path.exists(rs):
+        return paths
+    try:
+        lm = ElementTree.parse(rs).getroot()
+        for p in lm.findall('project'):
+            path = p.get('path')
+            if path:
+                paths.add(path)
+    except Exception as e:
+        print(f'Warning: could not parse {rs}: {e}')
+    return paths
 
-    for path in search_paths:
-        try:
-            lm = ElementTree.parse(path).getroot()
-            for node in lm.findall(tag):
-                if node.get(attr) == attr_value:
-                    return True
-        except FileNotFoundError:
-            pass
-        except Exception as e:
-            print(f'Warning: could not parse {path}: {e}')
-    return False
+def is_in_roomservice(path):
+    return path in get_roomservice_paths()
 
 def add_to_manifest(dependencies):
     if dryrun:
@@ -163,16 +169,25 @@ def add_to_manifest(dependencies):
     except Exception:
         lm = ElementTree.Element('manifest')
 
+    existing = set()
+    for p in lm.findall('project'):
+        if p.get('path'):
+            existing.add(p.get('path'))
+
     for dep in dependencies:
-        if dep.get('type') == 'project':
-            if is_in_manifest('project', 'path', dep['target_path']): continue
-            p = ElementTree.Element('project', attrib={
-                'path': dep['target_path'],
-                'remote': dep.get('remote', 'haloui-devices'),
-                'name': dep['repository']
-            })
-            if dep.get('branch'): p.set('revision', dep['branch'])
-            lm.append(p)
+        if dep.get('type') != 'project':
+            continue
+        if dep['target_path'] in existing:
+            continue
+        p = ElementTree.Element('project', attrib={
+            'path': dep['target_path'],
+            'remote': dep.get('remote', 'haloui-devices'),
+            'name': dep['repository']
+        })
+        if dep.get('branch'):
+            p.set('revision', dep['branch'])
+        lm.append(p)
+        existing.add(dep['target_path'])
 
     indent(lm, 0)
     with open('.repo/local_manifests/roomservice.xml', 'w') as f:
@@ -181,12 +196,17 @@ def add_to_manifest(dependencies):
 def get_default_revision(remote_name):
     try:
         lm = ElementTree.parse('.repo/manifests/snippets/haloui.xml').getroot()
-        return lm.find(f".//remote[@name='{remote_name}']").get('revision').split('/')[-1]
+        node = lm.find(f".//remote[@name='{remote_name}']")
+        if node is None:
+            return "main"
+        rev = node.get('revision')
+        if not rev:
+            return "main"
+        return rev.split('/')[-1]
     except Exception:
         return "main"
 
 def repo_sync(paths):
-    """Run `repo sync` for the given paths, honoring dry-run and reporting failure."""
     if dryrun:
         print(f"[dry run] would run: repo sync --force-sync {' '.join(paths)}")
         return True
@@ -196,27 +216,60 @@ def repo_sync(paths):
         return False
     return True
 
-def fetch_dependencies(repo_path):
+def is_synced(path):
+    return os.path.isdir(path) and any(os.scandir(path))
+
+def fetch_dependencies(repo_path, depth=0):
+    if depth > 10:
+        print(f'Warning: dependency recursion limit hit at {repo_path}')
+        return
     dep_file = os.path.join(repo_path, 'haloui.dependencies')
-    if not os.path.exists(dep_file): return
+    if not os.path.exists(dep_file):
+        return
     with open(dep_file, 'r') as f:
         dependencies = json.load(f)
 
-    fetch_list = []
-    sync_list = []
+    deps = []
     for dep in dependencies:
-        if not is_in_manifest('project', 'path', dep['target_path']):
-            dep['repository'] = dep.get('repository', dep.get('name'))
-            dep['type'] = 'project'
-            if 'remote' not in dep:
-                dep['remote'] = 'haloui-devices'
-            fetch_list.append(dep)
-            sync_list.append(dep['target_path'])
+        dep['repository'] = dep.get('repository', dep.get('name'))
+        dep['type'] = 'project'
+        if 'remote' not in dep:
+            dep['remote'] = 'haloui-devices'
+        if not dep['repository'] or not dep.get('target_path'):
+            print(f"Warning: skipping malformed dependency {dep}")
+            continue
+        if not dep.get('branch'):
+            dep['branch'] = get_default_revision(dep['remote'])
+        deps.append(dep)
 
-    if fetch_list:
-        add_to_manifest(fetch_list)
-        if repo_sync(sync_list):
-            for path in sync_list: fetch_dependencies(path)
+    to_add = [d for d in deps if not is_in_roomservice(d['target_path'])]
+    if to_add:
+        add_to_manifest(to_add)
+
+    sync_list = [d for d in deps if not is_synced(d['target_path'])]
+
+    if not sync_list:
+        return
+
+    synced_paths = []
+    failed_paths = []
+    for dep in sync_list:
+        path = dep['target_path']
+        if not is_in_roomservice(path):
+            print(f"Warning: {path} still missing from roomservice.xml, skipping")
+            failed_paths.append(path)
+            continue
+        if repo_sync([path]):
+            synced_paths.append(path)
+        else:
+            failed_paths.append(path)
+
+    if failed_paths:
+        print(f"Warning: {len(failed_paths)} dependenc{'y' if len(failed_paths) == 1 else 'ies'} "
+              f"failed to sync and were skipped: {', '.join(failed_paths)}")
+
+    for path in synced_paths:
+        fetch_dependencies(path, depth + 1)
 
 if depsonly:
     path = get_from_manifest(device)
@@ -227,14 +280,24 @@ if depsonly:
         sys.exit(1)
     sys.exit()
 
+found = False
 for repo in repositories:
     name = repo['name']
-    match = re.search(r'(?:android_)?(device|vendor|kernel)_([^_]+)_' + re.escape(device) + '$', name)
+    match = re.search(
+        r'(?:^|_)(?:android_)?(device|vendor|kernel|hardware)_(.+)_' + re.escape(device) + r'$'
+        r'|^android_(hardware|vendor)_qcom_(.+)$',
+        name
+    )
 
     if match:
-        repo_type = match.group(1)
-        manufacturer = match.group(2)
-        target_path = f'{repo_type}/{manufacturer}/{device}'
+        if match.group(1):
+            repo_type = match.group(1)
+            manufacturer = match.group(2)
+            target_path = f'{repo_type}/{manufacturer}/{device}'
+        else:
+            repo_type = match.group(3)
+            qcom_name = match.group(4)
+            target_path = f'{repo_type}/qcom/{qcom_name}'
         remote = repo.get('found_on', 'haloui-devices')
 
         print(f'Found: {name} on {remote} -> {target_path}')
@@ -248,7 +311,15 @@ for repo in repositories:
 
         if repo_sync([target_path]):
             fetch_dependencies(target_path)
-        sys.exit()
+            found = True
+            break
+        else:
+            print(f'Warning: failed to sync {target_path}, trying next match')
+            found = True
+            continue
 
-print(f'Repository for {device} not found.')
-sys.exit(1)
+if not found:
+    print(f'Repository for {device} not found.')
+    sys.exit(1)
+
+sys.exit(0)
