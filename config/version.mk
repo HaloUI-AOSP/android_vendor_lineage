@@ -1,6 +1,7 @@
 PRODUCT_VERSION_MAJOR = 1
 PRODUCT_VERSION_MINOR = 0
 PRODUCT_RELEASE_CODENAME = ABYDOS
+include vendor/official_devices/devices.mk
 
 ifeq ($(LINEAGE_VERSION_APPEND_TIME_OF_DAY),true)
     LINEAGE_BUILD_DATE := $(shell date -u +%Y%m%d_%H%M%S)
@@ -8,29 +9,26 @@ else
     LINEAGE_BUILD_DATE := $(shell date -u +%Y%m%d)
 endif
 
-# Set LINEAGE_BUILDTYPE from the env RELEASE_TYPE, for jenkins compat
+LINEAGE_BUILDTYPE ?= UNOFFICIAL
 
-ifndef LINEAGE_BUILDTYPE
-    ifdef RELEASE_TYPE
-        # Starting with "LINEAGE_" is optional
-        RELEASE_TYPE := $(shell echo $(RELEASE_TYPE) | sed -e 's|^LINEAGE_||g')
-        LINEAGE_BUILDTYPE := $(RELEASE_TYPE)
-    endif
+HALOUI_DEVICE := $(patsubst lineage_%,%,$(TARGET_PRODUCT))
+
+ifneq ($(HALOUI_MAINTAINER),)
+ifneq ($(filter $(HALOUI_MAINTAINER),$(HALOUI_MAINTAINERS)),)
+ifneq ($(filter $(HALOUI_DEVICE),$(HALOUI_DEVICES)),)
+    LINEAGE_BUILDTYPE := OFFICIAL
+    BUILD_TYPE_OFFICIAL := true
+endif
+endif
 endif
 
-# Filter out random types, so it'll reset to UNOFFICIAL
-ifeq ($(filter RELEASE NIGHTLY SNAPSHOT EXPERIMENTAL,$(LINEAGE_BUILDTYPE)),)
-    LINEAGE_BUILDTYPE := UNOFFICIAL
-    LINEAGE_EXTRAVERSION :=
+ifeq ($(TARGET_BUILD_GAPPS), true)
+    HALOUI_VARIANT := GMS
+else
+    HALOUI_VARIANT := VANILLA
 endif
 
-ifeq ($(LINEAGE_BUILDTYPE), UNOFFICIAL)
-    ifneq ($(TARGET_UNOFFICIAL_BUILD_ID),)
-        LINEAGE_EXTRAVERSION := -$(TARGET_UNOFFICIAL_BUILD_ID)
-    endif
-endif
-
-LINEAGE_VERSION_SUFFIX := $(LINEAGE_BUILD_DATE)-$(LINEAGE_BUILDTYPE)$(LINEAGE_EXTRAVERSION)-$(LINEAGE_BUILD)
+LINEAGE_VERSION_SUFFIX := $(LINEAGE_BUILD_DATE)-$(LINEAGE_BUILDTYPE)$(LINEAGE_EXTRAVERSION)-$(HALOUI_VARIANT)-$(LINEAGE_BUILD)
 
 # Internal version
 LINEAGE_VERSION := $(PRODUCT_VERSION_MAJOR).$(PRODUCT_VERSION_MINOR)-$(PRODUCT_RELEASE_CODENAME)-$(LINEAGE_VERSION_SUFFIX)
@@ -43,4 +41,6 @@ PRODUCT_PRODUCT_PROPERTIES += \
     ro.lineage.version=$(LINEAGE_VERSION) \
     ro.lineage.display.version=$(LINEAGE_DISPLAY_VERSION) \
     ro.lineage.build.version=$(PRODUCT_VERSION_MAJOR).$(PRODUCT_VERSION_MINOR) \
-    ro.lineage.releasetype=$(LINEAGE_BUILDTYPE)
+    ro.lineage.releasetype=$(LINEAGE_BUILDTYPE) \
+    ro.haloui.variant=$(HALOUI_VARIANT) \
+    ro.haloui.maintainer=$(HALOUI_MAINTAINER)
