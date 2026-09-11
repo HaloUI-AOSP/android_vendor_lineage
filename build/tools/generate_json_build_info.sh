@@ -1,8 +1,10 @@
 #!/bin/bash
+set -euo pipefail
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
-BLUE='\033[0;34m'
+YELLOW='\033[0;33m'
+MAGENTA='\033[0;35m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
@@ -14,9 +16,10 @@ fi
 TARGET_DEVICE=$1
 PRODUCT_OUT=$2
 
-ZIP_PATH=$(ls -t "$PRODUCT_OUT"/[hH]aloUI-*.zip 2>/dev/null | head -n1)
-if [ -z "$ZIP_PATH" ]; then
-    echo "Error: No haloUI-*.zip found in $PRODUCT_OUT"
+ZIP_PATH=$(find "$PRODUCT_OUT" -maxdepth 1 -type f -iname 'haloUI-*.zip' \
+    -printf '%T@ %p\n' 2>/dev/null | sort -nr | head -n1 | cut -d' ' -f2-)
+if [ -z "${ZIP_PATH:-}" ] || [ ! -r "$ZIP_PATH" ]; then
+    echo "Error: No readable haloUI-*.zip found in $PRODUCT_OUT" >&2
     exit 1
 fi
 FILENAME=$(basename "$ZIP_PATH")
@@ -25,22 +28,20 @@ if [[ "$FILENAME" =~ ^[hH]aloUI-([0-9]+(\.[0-9]+)*)-([a-zA-Z0-9_-]+)-[0-9]+-(OFF
     VERSION="${BASH_REMATCH[1]}"
     ROMTYPE="${BASH_REMATCH[4]}"
 else
-    echo "Error: Unable to parse filename: $FILENAME"
+    echo "Error: Unable to parse filename: $FILENAME" >&2
     exit 1
 fi
-
-FILE_PATH="$ZIP_PATH"
 
 BUILDPROP_PATH="$PRODUCT_OUT/system/build.prop"
-DATETIME=$(grep "ro.build.date.utc" "$BUILDPROP_PATH" | cut -d'=' -f2 | tr -d '\r\n')
-
+DATETIME=$(awk -F= '/^ro\.build\.date\.utc=/{print $2; exit}' "$BUILDPROP_PATH" | tr -d '\r\n')
 if [ -z "$DATETIME" ]; then
-    echo "Error: Could not extract timestamp from build.prop"
+    echo "Error: Could not extract ro.build.date.utc from $BUILDPROP_PATH" >&2
     exit 1
 fi
 
-SIZE=$(stat -c%s "$FILE_PATH")
-ID=$(md5sum "$FILE_PATH" | awk '{print $1}')
+SIZE=$(stat -c%s "$ZIP_PATH")
+ID=$(md5sum "$ZIP_PATH" | awk '{print $1}')
+SIZE_MB=$(awk -v s="$SIZE" 'BEGIN{printf "%.2f", s/1048576}')
 
 JSON_FILE="${TARGET_DEVICE}.json"
 
@@ -60,19 +61,15 @@ cat > "$JSON_FILE" <<EOF
 }
 EOF
 
-echo -e "${CYAN}"
-cat "$JSON_FILE"
-echo -e "${NC}"
+printf '%b' "$CYAN"; cat "$JSON_FILE"; printf '%b\n' "$NC"
 
 echo "=========================================="
-echo -e "         ${RED}Welcome to haloUI${NC}             "
+printf '         %bWelcome to haloUI%b\n' "$MAGENTA" "$NC"
 echo "=========================================="
-echo -e "        ${GREEN}BUILD COMPLETED SUCCESSFULLY${NC}      "
+printf '        %bBUILD COMPLETED SUCCESSFULLY%b\n' "$GREEN" "$NC"
 echo "------------------------------------------"
-echo "Datetime : $DATETIME"
-echo "Size     : $(awk "BEGIN {printf \"%.2f MB\", $SIZE/1048576}") ($SIZE bytes)"
-echo -e "Output   : ${BLUE}$FILE_PATH${NC}"
-echo "JSON     : $JSON_FILE"
+printf 'Datetime : %b%s%b\n' "$YELLOW" "$DATETIME" "$NC"
+printf 'Size     : %b%s MB (%s bytes)%b\n' "$YELLOW" "$SIZE_MB" "$SIZE" "$NC"
+printf 'Output   : %b%s%b\n' "$CYAN" "$ZIP_PATH" "$NC"
+printf 'JSON     : %b%s%b\n' "$YELLOW" "$JSON_FILE" "$NC"
 echo "=========================================="
-
-exit 0
