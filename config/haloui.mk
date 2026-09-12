@@ -8,6 +8,7 @@ PRODUCT_PACKAGES += \
     ParanoidSense
 
 PRODUCT_SYSTEM_EXT_PROPERTIES += \
+    log.tag.mgulk=S \
     ro.face.sense_service=true
 
 PRODUCT_COPY_FILES += \
