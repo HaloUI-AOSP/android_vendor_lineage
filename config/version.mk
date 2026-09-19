@@ -9,15 +9,15 @@ else
     LINEAGE_BUILD_DATE := $(shell date -u +%Y%m%d)
 endif
 
-LINEAGE_BUILDTYPE ?= UNOFFICIAL
+LINEAGE_BUILDTYPE ?= DISSONANCE
 
 HALOUI_DEVICE := $(patsubst lineage_%,%,$(TARGET_PRODUCT))
 
 ifneq ($(HALOUI_MAINTAINER),)
 ifneq ($(filter $(HALOUI_MAINTAINER),$(HALOUI_MAINTAINERS)),)
 ifneq ($(filter $(HALOUI_DEVICE),$(HALOUI_DEVICES)),)
-    LINEAGE_BUILDTYPE := OFFICIAL
-    BUILD_TYPE_OFFICIAL := true
+    LINEAGE_BUILDTYPE := KIVOTOS
+    BUILD_TYPE_KIVOTOS := true
 endif
 endif
 endif
