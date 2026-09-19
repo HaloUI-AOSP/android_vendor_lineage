@@ -6,6 +6,7 @@ GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
 MAGENTA='\033[0;35m'
 CYAN='\033[0;36m'
+BLUE='\033[0;34m'
 NC='\033[0m'
 
 if [ "$#" -ne 2 ]; then
@@ -24,12 +25,25 @@ if [ -z "${ZIP_PATH:-}" ] || [ ! -r "$ZIP_PATH" ]; then
 fi
 FILENAME=$(basename "$ZIP_PATH")
 
-if [[ "$FILENAME" =~ ^[hH]aloUI-([0-9]+(\.[0-9]+)*)-([a-zA-Z0-9_-]+)-[0-9]+-(OFFICIAL|UNOFFICIAL|EXPERIMENTAL)-.*\.zip$ ]]; then
+if [[ "$FILENAME" =~ ^[hH]aloUI-([0-9]+(\.[0-9]+)*)-([a-zA-Z0-9_-]+)-[0-9]+-(KIVOTOS|DISSONANCE)-.*\.zip$ ]]; then
     VERSION="${BASH_REMATCH[1]}"
     ROMTYPE="${BASH_REMATCH[4]}"
 else
     echo "Error: Unable to parse filename: $FILENAME" >&2
     exit 1
+fi
+
+if [ "$ROMTYPE" != "KIVOTOS" ]; then
+    echo "=========================================="
+    printf '         %bWelcome to haloUI%b\n' "$MAGENTA" "$NC"
+    echo "=========================================="
+    printf '        %bBUILD COMPLETED SUCCESSFULLY%b\n' "$GREEN" "$NC"
+    echo "------------------------------------------"
+    printf 'Romtype  : %b%s%b\n' "$YELLOW" "$ROMTYPE" "$NC"
+    printf 'Output   : %b%s%b\n' "$CYAN" "$ZIP_PATH" "$NC"
+    printf 'JSON     : %bSkipped (non-official build)%b\n' "$RED" "$NC"
+    echo "=========================================="
+    exit 0
 fi
 
 BUILDPROP_PATH="$PRODUCT_OUT/system/build.prop"
@@ -64,10 +78,13 @@ EOF
 printf '%b' "$CYAN"; cat "$JSON_FILE"; printf '%b\n' "$NC"
 
 echo "=========================================="
-printf '         %bWelcome to haloUI%b\n' "$MAGENTA" "$NC"
+printf '        %bWelcome to Kivotos, Sensei%b\n' "$MAGENTA" "$NC"
 echo "=========================================="
-printf '        %bBUILD COMPLETED SUCCESSFULLY%b\n' "$GREEN" "$NC"
+printf '      %bSCHALE MISSION ACCOMPLISHED%b\n' "$GREEN" "$NC"
 echo "------------------------------------------"
+printf 'Arona    : %bBuild registered in SCHALE DB%b\n' "$BLUE" "$NC"
+printf 'Plana    : %bVerification complete%b\n' "$BLUE" "$NC"
+printf 'Romtype  : %b%s%b\n' "$YELLOW" "$ROMTYPE" "$NC"
 printf 'Datetime : %b%s%b\n' "$YELLOW" "$DATETIME" "$NC"
 printf 'Size     : %b%s MB (%s bytes)%b\n' "$YELLOW" "$SIZE_MB" "$SIZE" "$NC"
 printf 'Output   : %b%s%b\n' "$CYAN" "$ZIP_PATH" "$NC"
