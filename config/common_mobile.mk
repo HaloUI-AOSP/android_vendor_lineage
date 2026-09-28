@@ -17,6 +17,7 @@ PRODUCT_PRODUCT_PROPERTIES += \
 PRODUCT_PACKAGES += \
     AvatarPicker \
     Backgrounds \
+    Gallery2 \
     Glimpse \
     LatinIME
 
@@ -46,6 +47,10 @@ PRODUCT_PACKAGES += \
     lineage_charger_animation \
     lineage_charger_animation_vendor
 endif
+
+# Credential storage
+PRODUCT_PACKAGES += \
+    android.software.credentials.prebuilt.xml
 
 # Legal
 PRODUCT_PRODUCT_PROPERTIES += \
