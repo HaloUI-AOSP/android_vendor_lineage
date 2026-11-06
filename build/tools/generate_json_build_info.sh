@@ -57,7 +57,7 @@ SIZE=$(stat -c%s "$ZIP_PATH")
 ID=$(md5sum "$ZIP_PATH" | awk '{print $1}')
 SIZE_MB=$(awk -v s="$SIZE" 'BEGIN{printf "%.2f", s/1048576}')
 
-JSON_FILE="${TARGET_DEVICE}.json"
+JSON_FILE="${PRODUCT_OUT}/${TARGET_DEVICE}.json"
 
 cat > "$JSON_FILE" <<EOF
 {
